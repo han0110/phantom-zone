@@ -421,6 +421,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "phantom-zone-wasm"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "phantom-zone-crypto",
+ "phantom-zone-evaluator",
+ "phantom-zone-math",
+ "rand_chacha",
+ "serde",
+ "serde-wasm-bindgen",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "plotters"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -610,6 +624,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cff085d2cb684faa248efb494c39b68e522822ac0de72ccf08109abde717cfb2"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-wasm-bindgen"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8302e169f0eddcc139c70f139d19d6467353af16f9fce27e8c30158036a1e16b"
+dependencies = [
+ "js-sys",
+ "serde",
+ "wasm-bindgen",
 ]
 
 [[package]]

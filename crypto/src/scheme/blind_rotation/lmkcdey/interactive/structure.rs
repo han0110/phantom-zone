@@ -53,13 +53,17 @@ pub struct LmkcdeyInteractiveCrs<S: SeedableRng> {
 }
 
 impl<S: SeedableRng> LmkcdeyInteractiveCrs<S> {
-    pub fn sample(mut rng: impl RngCore) -> Self {
-        let mut seed = S::Seed::default();
-        rng.fill_bytes(seed.as_mut());
+    pub fn new(seed: S::Seed) -> Self {
         Self {
             seed,
             _marker: PhantomData,
         }
+    }
+
+    pub fn sample(mut rng: impl RngCore) -> Self {
+        let mut seed = S::Seed::default();
+        rng.fill_bytes(seed.as_mut());
+        Self::new(seed)
     }
 }
 

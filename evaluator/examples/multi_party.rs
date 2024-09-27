@@ -1,7 +1,7 @@
 use core::{array::from_fn, cell::OnceCell, num::Wrapping};
 use itertools::Itertools;
 use num_traits::NumOps;
-use phantom_zone_evaluator::boolean::fhew::{param::I_4P, prelude::*};
+use phantom_zone_evaluator::boolean::fhew::{param::NI_4P_HB_FR, prelude::*};
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 use serde::{Deserialize, Serialize};
 
@@ -248,7 +248,7 @@ where
 }
 
 fn main() {
-    let mut server = Server::<NoisyPrimeRing, NonNativePowerOfTwo>::new(I_4P);
+    let mut server = Server::<NoisyPrimeRing, NonNativePowerOfTwo>::new(NI_4P_HB_FR);
     let mut clients = (0..server.param.total_shares)
         .map(|share_idx| {
             Client::<PrimeRing, NonNativePowerOfTwo>::new(server.param, server.crs, share_idx)

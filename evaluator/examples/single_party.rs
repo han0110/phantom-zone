@@ -3,39 +3,16 @@ use core::{
     {array::from_fn, num::Wrapping},
 };
 use num_traits::NumOps;
-use phantom_zone_evaluator::boolean::{dev::MockBoolEvaluator, fhew::prelude::*, FheBool};
+use phantom_zone_evaluator::boolean::{
+    dev::MockBoolEvaluator,
+    fhew::{param::NI_4P_HB_FR, prelude::*},
+    FheBool,
+};
 use rand::{RngCore, SeedableRng};
 
-type Evaluator = FhewBoolEvaluator<NoisyNativeRing, NonNativePowerOfTwoRing>;
+type Evaluator = FhewBoolEvaluator<NoisyPrimeRing, NonNativePowerOfTwo>;
 
-const PARAM: FhewBoolParam = FhewBoolParam {
-    message_bits: 2,
-    modulus: Modulus::PowerOfTwo(64),
-    ring_size: 2048,
-    sk_distribution: SecretDistribution::Gaussian(Gaussian(3.19)),
-    noise_distribution: NoiseDistribution::Gaussian(Gaussian(3.19)),
-    u_distribution: SecretDistribution::Ternary(Ternary),
-    auto_decomposition_param: DecompositionParam {
-        log_base: 24,
-        level: 1,
-    },
-    rlwe_by_rgsw_decomposition_param: RgswDecompositionParam {
-        log_base: 17,
-        level_a: 1,
-        level_b: 1,
-    },
-    lwe_modulus: Modulus::PowerOfTwo(16),
-    lwe_dimension: 620,
-    lwe_sk_distribution: SecretDistribution::Gaussian(Gaussian(3.19)),
-    lwe_noise_distribution: NoiseDistribution::Gaussian(Gaussian(3.19)),
-    lwe_ks_decomposition_param: DecompositionParam {
-        log_base: 1,
-        level: 13,
-    },
-    q: 2048,
-    g: 5,
-    w: 10,
-};
+const PARAM: FhewBoolParam = NI_4P_HB_FR.param;
 
 fn encrypt_bool<'a>(
     evaluator: &'a Evaluator,

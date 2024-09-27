@@ -36,3 +36,40 @@ pub const I_4P: FhewBoolMpiParam = FhewBoolMpiParam {
     },
     total_shares: 4,
 };
+
+pub const NI_4P_HB_FR: FhewBoolMpiParam = FhewBoolMpiParam {
+    param: FhewBoolParam {
+        message_bits: 2,
+        modulus: Modulus::Prime(18014398509404161),
+        ring_size: 2048,
+        sk_distribution: SecretDistribution::Ternary(Ternary),
+        noise_distribution: NoiseDistribution::Gaussian(Gaussian(3.19)),
+        u_distribution: SecretDistribution::Ternary(Ternary),
+        auto_decomposition_param: DecompositionParam {
+            log_base: 24,
+            level: 1,
+        },
+        rlwe_by_rgsw_decomposition_param: RgswDecompositionParam {
+            log_base: 17,
+            level_a: 1,
+            level_b: 1,
+        },
+        lwe_modulus: Modulus::PowerOfTwo(16),
+        lwe_dimension: 620,
+        lwe_sk_distribution: SecretDistribution::Ternary(Ternary),
+        lwe_noise_distribution: NoiseDistribution::Gaussian(Gaussian(3.19)),
+        lwe_ks_decomposition_param: DecompositionParam {
+            log_base: 1,
+            level: 13,
+        },
+        q: 2048,
+        g: 5,
+        w: 10,
+    },
+    rgsw_by_rgsw_decomposition_param: RgswDecompositionParam {
+        log_base: 3,
+        level_a: 13,
+        level_b: 12,
+    },
+    total_shares: 4,
+};

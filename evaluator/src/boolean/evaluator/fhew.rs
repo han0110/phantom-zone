@@ -349,7 +349,8 @@ mod test {
         test::tt,
     };
     use core::array::from_fn;
-    use rand::{thread_rng, SeedableRng};
+    use itertools::Itertools;
+    use rand::{thread_rng, Rng, SeedableRng};
 
     type FhewBoolEvaluator<R> = fhew::FhewBoolEvaluator<R, NonNativePowerOfTwoRing>;
 
@@ -373,6 +374,37 @@ mod test {
             },
             lwe_modulus: NonNativePowerOfTwo::new(16).into(),
             lwe_dimension: 100,
+            lwe_sk_distribution: Gaussian(3.19).into(),
+            lwe_noise_distribution: Gaussian(3.19).into(),
+            lwe_ks_decomposition_param: DecompositionParam {
+                log_base: 1,
+                level: 13,
+            },
+            q: 2 * ring_size,
+            g: 5,
+            w: 10,
+        }
+    }
+
+    fn timer_param(modulus: impl Into<Modulus>, ring_size: usize) -> FhewBoolParam {
+        FhewBoolParam {
+            message_bits: 2,
+            modulus: modulus.into(),
+            ring_size,
+            sk_distribution: Gaussian(3.19).into(),
+            noise_distribution: Gaussian(3.19).into(),
+            u_distribution: Ternary.into(),
+            auto_decomposition_param: DecompositionParam {
+                log_base: 24,
+                level: 1,
+            },
+            rlwe_by_rgsw_decomposition_param: RgswDecompositionParam {
+                log_base: 17,
+                level_a: 1,
+                level_b: 1,
+            },
+            lwe_modulus: NonNativePowerOfTwo::new(16).into(),
+            lwe_dimension: 620,
             lwe_sk_distribution: Gaussian(3.19).into(),
             lwe_noise_distribution: Gaussian(3.19).into(),
             lwe_ks_decomposition_param: DecompositionParam {
@@ -426,38 +458,68 @@ mod test {
             let sk = sk_gen(param.ring_size, param.sk_distribution);
             let evaluator = FhewBoolEvaluator::<R>::sample(param, &sk, thread_rng());
             let encrypt = |m| encrypt(evaluator.param(), evaluator.ring(), &sk, m);
-            macro_rules! assert_decrypted_to {
-                ($ct_a:ident.$op:ident($($ct_b:ident)?), $c:expr) => {
-                    paste::paste! {
-                        let mut ct_a = $ct_a.clone();
-                        evaluator.[<$op _assign>](&mut ct_a $(, $ct_b)?);
-                        assert_eq!(ct_a.decrypt(evaluator.ring(), &sk), $c);
-                    }
-                };
+
+            let mut rng = thread_rng();
+            let mut a = (0..100).map(|_| encrypt(rng.gen_bool(0.5))).collect_vec();
+            let b = (0..100).map(|_| encrypt(rng.gen_bool(0.5))).collect_vec();
+
+            // Warm up
+
+            for i in 0..100 {
+                evaluator.bitand_assign(&mut a[i % 100], &b[i % 100]);
             }
-            for m in 0..1 << 1 {
-                let m = m == 1;
-                let ct = encrypt(m);
-                assert_decrypted_to!(ct.bitnot(), !m);
+
+            let perc = |n: std::time::Duration, d: std::time::Duration| {
+                100f64 * n.as_nanos() as f64 / d.as_nanos() as f64
+            };
+            let milli = |v: std::time::Duration| v.as_micros() as f64 / 1000.0;
+            let print = |indent, name: &str, a, b| {
+                println!(
+                    "{name:>indent$}: {:>6.03}ms ({:.02}%)",
+                    milli(a),
+                    perc(a, b),
+                    indent = indent + name.len()
+                );
+            };
+
+            // Start
+
+            phantom_zone_math::reset_timer();
+            const N: u32 = 300;
+            let start = std::time::Instant::now();
+            for i in 0..300 {
+                evaluator.bitand_assign(&mut a[i % 100], &b[i % 100]);
             }
-            for m in 0..1 << 2 {
-                let [a, b] = from_fn(|i| (m >> i) & 1 == 1);
-                let [ct_a, ct_b] = &[a, b].map(encrypt);
-                assert_decrypted_to!(ct_a.bitand(ct_b), a & b);
-                assert_decrypted_to!(ct_a.bitnand(ct_b), !(a & b));
-                assert_decrypted_to!(ct_a.bitor(ct_b), a | b);
-                assert_decrypted_to!(ct_a.bitnor(ct_b), !(a | b));
-                assert_decrypted_to!(ct_a.bitxor(ct_b), a ^ b);
-                assert_decrypted_to!(ct_a.bitxnor(ct_b), !(a ^ b));
+            let t_boot = start.elapsed() / N;
+            let [t_ks, t_br, t_rgsw, t_auto, t_forw, t_back, t_eval, t_deco] =
+                phantom_zone_math::timer().map(|a| a / N);
+            {
+                println!("bootstrapping: {:?}", t_boot);
+                print(2, "ks", t_ks, t_boot);
+                print(2, "br", t_br, t_boot);
+                println!("    --- by operations ---");
+                print(4, "rgsw", t_rgsw, t_br);
+                print(4, "auto", t_auto, t_br);
+                print(4, " ...", t_br - (t_rgsw + t_auto), t_br);
+                println!("    --- by components ---");
+                print(4, "  forward", t_forw, t_br);
+                print(4, " backward", t_back, t_br);
+                print(4, " eval_fma", t_eval, t_br);
+                print(4, "decompose", t_deco, t_br);
+                print(
+                    4,
+                    "      ...",
+                    t_br - (t_forw + t_back + t_eval + t_deco),
+                    t_br,
+                );
+                print(2, "...", t_boot - (t_ks + t_br), t_boot);
             }
         }
 
-        run::<NoisyNativeRing>(test_param(Native::native()));
-        run::<NoisyNonNativePowerOfTwoRing>(test_param(NonNativePowerOfTwo::new(50)));
-        run::<NativeRing>(test_param(Native::native()));
-        run::<NonNativePowerOfTwoRing>(test_param(NonNativePowerOfTwo::new(50)));
-        run::<NoisyPrimeRing>(test_param(Prime::gen(50, 11)));
-        run::<PrimeRing>(test_param(Prime::gen(50, 11)));
+        run::<NoisyNativeRing>(timer_param(Native::native(), 2048));
+        run::<PrimeRing>(timer_param(Prime::gen(54, 12), 2048));
+        run::<NoisyNativeRing>(timer_param(Native::native(), 4096));
+        run::<PrimeRing>(timer_param(Prime::gen(54, 13), 4096));
     }
 
     #[test]

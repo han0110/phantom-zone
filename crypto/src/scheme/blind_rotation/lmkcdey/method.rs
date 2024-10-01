@@ -93,6 +93,7 @@ pub fn bootstrap<'a, 'b, 'c, R: RingOps, M: ModulusOps>(
     debug_assert_eq!((2 * ring.ring_size()) % bs_key.q(), 0);
     let (ct, f_auto_neg_g) = (ct.into(), f_auto_neg_g.into());
 
+    let sss = std::time::Instant::now();
     let mut ct_ks_mod_switch = LweCiphertext::scratch(bs_key.ks_key().to_dimension(), &mut scratch);
     key_switch_mod_switch_odd(
         ring,
@@ -102,6 +103,7 @@ pub fn bootstrap<'a, 'b, 'c, R: RingOps, M: ModulusOps>(
         ct.as_view(),
         scratch.reborrow(),
     );
+    phantom_zone_math::add_time_ks(sss);
 
     let mut acc = RlweCiphertext::scratch(ring.ring_size(), ring.ring_size(), &mut scratch);
     acc.a_mut().fill(ring.zero());
@@ -115,7 +117,9 @@ pub fn bootstrap<'a, 'b, 'c, R: RingOps, M: ModulusOps>(
     let gb = bs_key.g() * *ct_ks_mod_switch.b() as usize;
     ring.poly_mul_assign_monomial(acc.b_mut(), (embedding_factor * gb) as _);
 
+    let sss = std::time::Instant::now();
     blind_rotate_core(ring, &mut acc, bs_key, ct_ks_mod_switch.a(), scratch);
+    phantom_zone_math::add_time_br(sss);
 
     rlwe::sample_extract(ring, ct, &acc, 0);
 }
@@ -150,34 +154,48 @@ fn blind_rotate_core<'a, R: RingOps, T>(
     let mut acc = acc.into();
     let mut v = 0;
     for l in (1..bs_key.q() / 4).rev() {
+        let sss = std::time::Instant::now();
         for (_, j) in i_n.take_while_ref(|(log, _)| *log == l) {
             rgsw::rlwe_by_rgsw_prep_in_place(ring, &mut acc, bs_key.brk(*j), scratch.reborrow());
         }
+        phantom_zone_math::add_time_rgsw(sss);
         v += 1;
+        let sss = std::time::Instant::now();
         let has_adj = i_n.peek().filter(|(log, _)| (*log == l - 1)).is_some();
         if has_adj || v == bs_key.w() || l == 1 {
             rlwe::automorphism_prep_in_place(ring, &mut acc, bs_key.ak(v), scratch.reborrow());
             v = 0
         }
+        phantom_zone_math::add_time_auto(sss);
     }
+    let sss = std::time::Instant::now();
     for (_, j) in i_n {
         rgsw::rlwe_by_rgsw_prep_in_place(ring, &mut acc, bs_key.brk(*j), scratch.reborrow());
     }
+    phantom_zone_math::add_time_rgsw(sss);
+    let sss = std::time::Instant::now();
     rlwe::automorphism_prep_in_place(ring, &mut acc, bs_key.ak_neg_g(), scratch.reborrow());
+    phantom_zone_math::add_time_auto(sss);
     for l in (1..bs_key.q() / 4).rev() {
+        let sss = std::time::Instant::now();
         for (_, j) in i_p.take_while_ref(|(log, _)| *log == l) {
             rgsw::rlwe_by_rgsw_prep_in_place(ring, &mut acc, bs_key.brk(*j), scratch.reborrow());
         }
+        phantom_zone_math::add_time_rgsw(sss);
         v += 1;
+        let sss = std::time::Instant::now();
         let has_adj = i_p.peek().filter(|(log, _)| (*log == l - 1)).is_some();
         if has_adj || v == bs_key.w() || l == 1 {
             rlwe::automorphism_prep_in_place(ring, &mut acc, bs_key.ak(v), scratch.reborrow());
             v = 0
         }
+        phantom_zone_math::add_time_auto(sss);
     }
+    let sss = std::time::Instant::now();
     for (_, j) in i_p {
         rgsw::rlwe_by_rgsw_prep_in_place(ring, &mut acc, bs_key.brk(*j), scratch.reborrow());
     }
+    phantom_zone_math::add_time_rgsw(sss);
 }
 
 /// Returns negative and positive sets of indices `j` (of `a_j`) where

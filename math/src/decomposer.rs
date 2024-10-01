@@ -51,11 +51,15 @@ pub trait Decomposer<T: 'static + Copy + Debug + Send + Sync>: Clone + Debug + S
     fn recompose(&self, a: impl IntoIterator<Item = T>) -> T;
 
     fn slice_round(&self, b: &mut [T], a: impl IntoIterator<Item: Borrow<T>>) {
+        let sss = std::time::Instant::now();
         izip_eq!(b, a).for_each(|(b, a)| *b = self.round(a.borrow()));
+        crate::add_time_deco(sss);
     }
 
     fn slice_decompose_next(&self, b: &mut [T], a: &mut [T]) {
+        let sss = std::time::Instant::now();
         izip_eq!(b, a).for_each(|(b, a)| *b = self.decompose_next(a));
+        crate::add_time_deco(sss);
     }
 
     fn slice_decompose_zip_for_each<B>(

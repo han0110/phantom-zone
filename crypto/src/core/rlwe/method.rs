@@ -340,11 +340,13 @@ pub fn automorphism_prep_in_place<'a, 'b, R: RingOps>(
         ks_key.ct_iter(),
         scratch.reborrow(),
     );
+    let sss = std::time::Instant::now();
     let b = scratch.copy_slice(ct.b());
     let eval_scratch = ring.take_eval_scratch(&mut scratch);
     ring.backward(ct.a_mut(), ct_eval.a_mut(), eval_scratch);
     ring.backward(ct.b_mut(), ct_eval.b_mut(), eval_scratch);
     ring.poly_add_auto(ct.b_mut(), b, auto_map);
+    phantom_zone_math::add_time_back(sss);
 }
 
 pub(crate) fn decomposed_fma<'a, 'b, R: RingOps, const DIRTY: bool>(
@@ -391,9 +393,13 @@ pub(crate) fn decomposed_fma_prep<'a, 'b, R: RingOps, const DIRTY: bool>(
         } else {
             R::eval_fma_prep
         };
+        let sss = std::time::Instant::now();
         ring.forward(t0, a_i, eval_scratch);
+        phantom_zone_math::add_time_forw(sss);
+        let sss = std::time::Instant::now();
         eval_fma_prep(ring, ct_eval.a_mut(), t0, b_i.a());
         eval_fma_prep(ring, ct_eval.b_mut(), t0, b_i.b());
+        phantom_zone_math::add_time_eval(sss);
     });
 }
 

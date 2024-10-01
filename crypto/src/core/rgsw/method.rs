@@ -154,9 +154,11 @@ pub fn rlwe_by_rgsw_prep_in_place<'a, 'b, R: RingOps>(
         ct_rgsw.b_ct_iter(),
         scratch.reborrow(),
     );
+    let sss = std::time::Instant::now();
     let eval_scratch = ring.take_eval_scratch(&mut scratch);
     ring.backward(ct_rlwe.a_mut(), ct_eval.a_mut(), eval_scratch);
     ring.backward(ct_rlwe.b_mut(), ct_eval.b_mut(), eval_scratch);
+    phantom_zone_math::add_time_back(sss);
 }
 
 pub fn rgsw_by_rgsw_in_place<'a, 'b, R: RingOps>(
